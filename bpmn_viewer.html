@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        #canvas {
+            height: 600px;
+            width: 100%;
+            border: 1px solid #ccc;
+        }
+    </style>
+    <!-- Cargar bpmn-js desde CDN -->
+    <script src="https://unpkg.com/bpmn-js@9.0.3/dist/bpmn-viewer.production.min.js"></script>
+</head>
+<body>
+    <div id="canvas"></div>
+    <script>
+        // Inicializar el visor BPMN
+        var bpmnViewer = new BpmnJS({
+            container: '#canvas'
+        });
+
+        // Obtener el XML desde Streamlit (pasado como variable)
+        var bpmnXML = "{{BPMN_XML}}";
+
+        // Renderizar el diagrama
+        bpmnViewer.importXML(bpmnXML, function(err) {
+            if (err) {
+                console.error('Error rendering BPMN diagram:', err);
+                document.body.innerHTML += '<p>Error al renderizar el diagrama BPMN.</p>';
+            } else {
+                console.log('BPMN diagram rendered successfully');
+                // Zoom para ajustar el diagrama
+                bpmnViewer.get('canvas').zoom('fit-viewport');
+            }
+        });
+    </script>
+</body>
+</html>
