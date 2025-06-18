@@ -3,7 +3,7 @@ import os
 import streamlit as st
 from langchain_openai import ChatOpenAI
 from langchain.prompts import PromptTemplate
-from langchain.chains import LLMChain
+from langchain.chains import LLMChain, SimpleSequentialChain
 from dotenv import load_dotenv
 import streamlit.components.v1 as components
 import xml.sax.saxutils as saxutils
@@ -20,24 +20,45 @@ llm = ChatOpenAI(
 
 # Definir un prompt
 prompt = PromptTemplate(
-    input_variables=["idioma_entrada","idioma_salida","user_input"],
+    input_variables=["input"],
     template="""
             Eres un experto en modelado de procesos. 
             Recibirás una descripción en lenguaje natural y 
-            debes devolver una estructura XML clara para generar un diagrama BPMN con la estructura
-            de process y bpmndi:BPMNDiagram,
+            debes resumir esto para explicar un flujo ademas especificar los pools y lanes.
+            ademas de los roles
             
-
             Descripción del usuario:
-            {user_input}
+            {input}
+    """
+)
 
-            Devuelve solo el XML del proceso BPMN
+prompt1 = PromptTemplate(
+    template="""
+            En base a la explicacion 
+            {XML}
+            debes devolver una estructura XML clara para generar un diagrama BPMN con la estructura
+            de process 
+            Descripción del usuario:
+            Devuelve solo el XML del proceso,lines, pools y collaboration BPMN
 
     """
 )
+prompt2 = PromptTemplate(
+    template="""
+            Ahora en base al XML
+            {XML}
+            genera en el XML el bpmndi:BPMNDiagram.
+            Descripción del usuario:
+            Devuelve el XML completo
+    """
+)
+
 #con las cadenas secuenciales se puede implementar dos consultas en un arrglo
 # Crear una cadena de LangChain
-chain = LLMChain(llm=llm, prompt=prompt)
+chain1 = LLMChain(llm=llm, prompt=prompt)# Modelo y pront 
+chain2 = LLMChain(llm=llm, prompt=prompt1)
+chain3 = LLMChain(llm=llm, prompt=prompt2)
+cadena_general = SimpleSequentialChain(chains=[chain1,chain2,chain3],verbose=True)
 st.set_page_config(page_title="Generador BPMN con IA",layout="centered")
 st.title("Generador de Procesos BPMN con IA")
 descripcion=st.text_area("Describe tu proceso en lenguaje natural:")
@@ -46,7 +67,8 @@ if st.button("Generar XML BPMN"):
         st.warning("Por favor escribe una descripción del proceso.")
     else:
         with st.spinner("Generando XML..."):
-            resultado = chain.run(idioma_entrada='español',idioma_salida='español',user_input=descripcion)
+            resultado = cadena_general.run(input=descripcion)
+            
             st.success("✅ Generado exitosamente:")
             st.code(resultado, language="xml")
             st.markdown("### Vista del Diagrama BPMN")
